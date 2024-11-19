@@ -5,21 +5,29 @@ const admin = require('firebase-admin');
 const path = require('path');
 const fs = require('fs');
 
-// Inisialisasi Firebase Admin SDK dengan kredensial service account
-const serviceAccount = path.join(__dirname, 'service-account-key.json');
+// Inisialisasi Firebase Admin SDK menggunakan default credentials
+// admin.initializeApp({
+//   credential: admin.credential.applicationDefault(),
+//   projectId: process.env.GOOGLE_CLOUD_PROJECT || 'submissionmlgc-akbarpermana',
+// });
+
+// Path ke file service account
+const serviceAccountPath = '/root/config/service-account-key.json'; 
+
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert(require(serviceAccountPath)),
 });
+
 const db = admin.firestore();
 
-// Cloud Storage setup
-const storage = new Storage({ keyFilename: serviceAccount });
-const bucketName = 'storagepenerapan-ml';
-const modelFolder = path.join(__dirname, 'local_model');
+// Cloud Storage setup menggunakan default credentials
+const storage = new Storage(); 
+const bucketName = 'storagepenerapan-ml'; // Nama bucket Cloud Storage
+const modelFolder = path.join(__dirname, 'local_model'); // Folder lokal untuk menyimpan model
 
 let model;
 
-// Fungsi untuk mengunduh file dari Cloud Storage
+// ngunduh file dari Cloud Storage
 const downloadFile = async (bucketName, fileName, destination) => {
   const bucket = storage.bucket(bucketName);
   const file = bucket.file(fileName);
@@ -27,15 +35,8 @@ const downloadFile = async (bucketName, fileName, destination) => {
   console.log(`File ${fileName} downloaded to ${destination}`);
 };
 
-// Fungsi untuk memuat model dari Cloud Storage
+// Fungsi ngambil model dari Cloud Storage
 const loadModel = async () => {
-  try {
-    const test = await db.collection('predictions').get();
-    console.log('Firestore connection test successful:', test.size, 'documents found.');
-  } catch (error) {
-    console.error('Firestore connection failed:', error.message);
-  }
-  
   try {
     if (!fs.existsSync(modelFolder)) {
       fs.mkdirSync(modelFolder);
@@ -60,7 +61,7 @@ const loadModel = async () => {
   }
 };
 
-// Fungsi untuk menangani prediksi
+//menangani prediksi
 const predictHandler = async (req, res) => {
   try {
     if (!req.file) throw new Error('No file uploaded');
@@ -73,20 +74,20 @@ const predictHandler = async (req, res) => {
     image = image.toFloat(); // Konversi tipe data ke float32
     console.log('Image tensor shape:', image.shape);
 
-    // Pastikan model telah dimuat
+
     if (!model) {
       throw new Error('Model is not loaded. Please ensure the model is properly initialized.');
     }
 
-    // Prediksi menggunakan model
+    // Prediksi model
     const prediction = model.predict(image).dataSync();
     console.log('Prediction result:', prediction);
 
-    // Interpretasi hasil prediksi
+    // hasil prediksi
     const result = prediction[0] > 0.5 ? 'Cancer' : 'Non-cancer';
     console.log('Classification result:', result);
 
-    // Simpan data prediksi ke Firestore
+    // nyimpen prediksi ke Firestore
     const id = uuidv4();
     const firestoreData = {
       id: id,
@@ -97,7 +98,7 @@ const predictHandler = async (req, res) => {
 
     await db.collection('predictions').doc(id).set(firestoreData);
 
-    // Kirim respons ke klien
+  
     const response = {
       status: 'success',
       message: 'Model is predicted successfully',
@@ -114,7 +115,7 @@ const predictHandler = async (req, res) => {
   }
 };
 
-// Fungsi untuk menangani riwayat prediksi
+//menanganin riwayat prediksi
 const historyHandler = async (req, res) => {
   try {
     const snapshot = await db.collection('predictions').get();
@@ -135,7 +136,7 @@ const historyHandler = async (req, res) => {
   }
 };
 
-// Fungsi untuk menangani error file terlalu besar
+// nanganin error file terlalu besar
 const errorHandler = (err, req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') {
     res.status(413).json({
