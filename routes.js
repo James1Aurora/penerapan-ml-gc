@@ -5,7 +5,7 @@ const { predictHandler, historyHandler, errorHandler } = require('./handler');
 
 // Setup storage untuk multer
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage, limits: { fileSize: 1000000 } }); // Maksimal 1MB
+const upload = multer({ storage: storage, limits: { fileSize: 1000000 } });
 
 const router = express.Router();
 
